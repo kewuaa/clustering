@@ -5,6 +5,13 @@
 #include <sstream>
 #include <cassert>
 #include <initializer_list>
+#ifdef _WIN32
+#define ALIGNED_MALLOC(ALIGNMENT, SIZE) _aligned_malloc(SIZE, ALIGNMENT)
+#define ALIGNED_FREE(PTR) _aligned_free(PTR)
+#else
+#define ALIGNED_MALLOC(ALIGNMENT, SIZE) std::aligned_alloc(ALIGNMENT, SIZE)
+#define ALIGNED_FREE(PTR) std::free(PTR)
+#endif
 
 /**
  * @brief Represents a multidimensional array (NDArray) of a fixed number of dimensions N and element type T.
@@ -264,13 +271,13 @@ class NDArray {
     AlignedAllocator(const typename NDArray<U, N>::template AlignedAllocator<Align>&) noexcept {}
 
     pointer allocate(size_type n, const_pointer hint = 0) {
-      if (auto p = static_cast<pointer>(aligned_alloc(Align, n * sizeof(T))))
+      if (auto p = static_cast<pointer>(ALIGNED_MALLOC(Align, n * sizeof(T))))
         return p;
       throw std::bad_alloc();
     }
 
     void deallocate(pointer p, size_type n) noexcept {
-      free(p);
+      ALIGNED_FREE(p);
     }
   };
  private:
